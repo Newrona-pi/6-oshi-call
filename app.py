@@ -258,6 +258,45 @@ def list_codes():
     return result
 
 
+@app.route('/admin/update_from_json')
+def update_from_json():
+    """
+    管理者用: serial_codes.json の内容でデータベースを更新
+    例: https://your-app.onrender.com/admin/update_from_json
+    """
+    if not os.path.exists(DATA_FILE):
+        return f'エラー: {DATA_FILE} が見つかりません。', 404
+    
+    with open(DATA_FILE, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    
+    updated = 0
+    added = 0
+    
+    for code, info in data.items():
+        serial_code = SerialCode.query.get(code)
+        
+        if serial_code:
+            # 既存のコードを更新
+            serial_code.audio_url = info['audio_url']
+            serial_code.used = info['used']
+            updated += 1
+        else:
+            # 新しいコードを追加
+            new_code = SerialCode(
+                code=code,
+                audio_url=info['audio_url'],
+                used=info['used']
+            )
+            db.session.add(new_code)
+            added += 1
+    
+    db.session.commit()
+    
+    return f'更新完了: {updated}個のコードを更新、{added}個のコードを追加しました。'
+
+
+
 
 @app.route('/')
 def index():
