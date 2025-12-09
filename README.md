@@ -224,11 +224,29 @@ PostgreSQLを使用することで、再起動してもデータが消えるこ�
 
 Renderで発行されたURLを使ってTwilioを設定します。
 
-1. [Twilio Console](https://console.twilio.com/)
-2. **Phone Numbers** → 管理番号を選択
-3. **Voice Configuration** → **A CALL COMES IN**
-   - **URL**: `https://<あなたのアプリ名>.onrender.com/voice`
-   - **HTTP**: POST
+### Twilioの設定更新
+
+Renderで発行されたURLを使ってTwilioを設定します。
+
+1. **Twilio Consoleにログイン**
+   [Twilio Console](https://console.twilio.com/) にアクセスします。
+
+2. **電話番号の設定画面を開く**
+   - 左側のサイドメニューから **「Phone Numbers」** > **「Manage」** > **「Active numbers」** をクリックします。
+   - ※サイドメニューが見当たらない場合は、画面左上の「Develop」タブをクリックしてみてください。
+
+3. **使用する電話番号を選択**
+   - リストから、今回使用する電話番号リンクをクリックします。
+
+4. **Webhookの設定**
+   - 設定画面を下の方へスクロールし、**「Voice & Fax」**（または **「Voice Configuration」**）というセクションを探します。
+   - **「A CALL COMES IN」** という項目の設定を以下のように変更します：
+     - 左のドロップダウン: **Webhook**
+     - 右のURL欄: `https://<あなたのアプリ名>.onrender.com/voice`
+     - 右端のHTTPメソッド: **HTTP POST**
+
+5. **保存**
+   - 画面最下部（または右上）にある **「Save configuration」** ボタンをクリックして設定を保存します。
 
 ## ローカルでの開発
 

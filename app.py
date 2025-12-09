@@ -20,7 +20,7 @@ import os
 
 app = Flask(__name__)
 
-from flask import Flask, request
+from flask import Flask, request, send_from_directory, url_for
 from twilio.twiml.voice_response import VoiceResponse, Gather
 from flask_sqlalchemy import SQLAlchemy
 import json
@@ -91,35 +91,24 @@ def init_db():
 # アプリ起動時にDB初期化を行う（本番ではコマンドで行うのが一般的だが簡易化のため）
 init_db()
 
-@app.route('/voice', methods=['GET', 'POST'])
-def voice():
-    """
-    着信時に呼ばれるエンドポイント
-    """
-    response = VoiceResponse()
-    
-    # Gather: ユーザーからの入力（DTMFトーン）を受け付ける
-    gather = Gather(
-        num_digits=4,           # 入力桁数（★必要に応じて変更してください）
-        action='/check_code',   # 入力後に呼ばれるエンドポイント
-        method='POST',
-        timeout=10
-    )
-    
-    gather.say(
-        'こんにちは。シリアルコードを入力してください。',
-        language='ja-JP'
-    )
-    
-    response.append(gather)
-    
-    response.say(
-        '入力が確認できませんでした。もう一度おかけ直しください。',
-        language='ja-JP'
-    )
-    
-    return str(response)
+from flask import Flask, request, send_from_directory, url_for
+# ... (imports)
 
+# ... (db setup)
+
+# ... (init_db function)
+
+# ★追加: 音声ファイルを配信するエンドポイント
+@app.route('/audio/<path:filename>')
+def serve_audio(filename):
+    """
+    音声ファイルを配信するエンドポイント
+    例: /audio/hayase.wav にアクセスすると、ローカルの hayase.wav を返す
+    """
+    return send_from_directory('.', filename)
+
+@app.route('/voice', methods=['GET', 'POST'])
+# ... (voice function remains same)
 
 @app.route('/check_code', methods=['POST'])
 def check_code():
@@ -160,8 +149,21 @@ def check_code():
             language='ja-JP'
         )
         
-        # 音声ファイルを再生
-        response.play(serial_code.audio_url)
+        # 音声ファイルのURLを生成
+        # http(s)://で始まる場合はそのまま、そうでなければ自分のサーバーのURLとして生成
+        audio_target = serial_code.audio_url
+        if not audio_target.startswith(('http://', 'https://')):
+            # 現在のサーバーのURL + /audio/ + ファイル名
+            # _external=True で絶対URL (https://...) を生成する
+            audio_url = url_for('serve_audio', filename=audio_target, _external=True)
+            # Renderなどプロキシ環境下で http になることがあるためヘッダーを見て https にする補正
+            if request.headers.get('X-Forwarded-Proto') == 'https':
+                audio_url = audio_url.replace('http://', 'https://', 1)
+        else:
+            audio_url = audio_target
+
+        print(f"再生URL: {audio_url}")
+        response.play(audio_url)
         
         # 終了メッセージ
         response.say(
