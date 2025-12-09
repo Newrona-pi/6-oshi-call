@@ -208,6 +208,40 @@ def check_code():
     return str(response)
 
 
+
+
+@app.route('/admin/reset_code/<code>')
+def reset_code(code):
+    """
+    管理者用: 指定したシリアルコードを未使用に戻す
+    例: https://your-app.onrender.com/admin/reset_code/1234
+    """
+    serial_code = SerialCode.query.get(code)
+    
+    if not serial_code:
+        return f'エラー: コード "{code}" は存在しません。', 404
+    
+    if not serial_code.used:
+        return f'コード "{code}" は既に未使用です。'
+    
+    serial_code.used = False
+    db.session.commit()
+    
+    return f'コード "{code}" を未使用に戻しました。'
+
+
+@app.route('/admin/reset_all')
+def reset_all():
+    """
+    管理者用: すべてのシリアルコードを未使用に戻す
+    例: https://your-app.onrender.com/admin/reset_all
+    """
+    updated_count = SerialCode.query.filter_by(used=True).update({'used': False})
+    db.session.commit()
+    
+    return f'{updated_count}個のコードを未使用に戻しました。'
+
+
 @app.route('/')
 def index():
     """
