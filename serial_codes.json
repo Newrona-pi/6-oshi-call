@@ -1,12 +1,10 @@
-[
-    {
-        "code": "1234",
-        "audio_file": "hayase.wav",
+{
+    "1234": {
+        "audio_url": "hayase.wav",
         "used": false
     },
-    {
-        "code": "5678",
-        "audio_file": "loop100302.wav",
+    "5678": {
+        "audio_url": "loop100302.wav",
         "used": false
     }
-]
+}
