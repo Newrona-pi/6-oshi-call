@@ -108,7 +108,35 @@ def serve_audio(filename):
     return send_from_directory('.', filename)
 
 @app.route('/voice', methods=['GET', 'POST'])
-# ... (voice function remains same)
+def voice():
+    """
+    着信時に呼ばれるエンドポイント
+    """
+    response = VoiceResponse()
+    
+    # Gather: ユーザーからの入力（DTMFトーン）を受け付ける
+    gather = Gather(
+        num_digits=4,           # 入力桁数（★必要に応じて変更してください）
+        action='/check_code',   # 入力後に呼ばれるエンドポイント
+        method='POST',
+        timeout=10              # 入力待ち時間（秒）
+    )
+    
+    # 日本語で案内メッセージを読み上げる
+    gather.say(
+        'こんにちは。シリアルコードを入力してください。',
+        language='ja-JP'
+    )
+    
+    response.append(gather)
+    
+    # 入力がなかった場合のメッセージ
+    response.say(
+        '入力が確認できませんでした。もう一度おかけ直しください。',
+        language='ja-JP'
+    )
+    
+    return str(response)
 
 @app.route('/check_code', methods=['POST'])
 def check_code():
