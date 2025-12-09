@@ -242,6 +242,23 @@ def reset_all():
     return f'{updated_count}個のコードを未使用に戻しました。'
 
 
+@app.route('/admin/list_codes')
+def list_codes():
+    """
+    管理者用: データベース内のすべてのシリアルコードを表示
+    例: https://your-app.onrender.com/admin/list_codes
+    """
+    codes = SerialCode.query.all()
+    
+    result = '<h1>シリアルコード一覧</h1><table border="1"><tr><th>コード</th><th>音声URL</th><th>使用済み</th></tr>'
+    for code in codes:
+        result += f'<tr><td>{code.code}</td><td>{code.audio_url}</td><td>{"はい" if code.used else "いいえ"}</td></tr>'
+    result += '</table>'
+    
+    return result
+
+
+
 @app.route('/')
 def index():
     """
