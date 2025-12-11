@@ -15,25 +15,102 @@ git commit -m "Add GitHub Actions workflow for scheduled execution"
 git push origin main
 ```
 
-### 2. GitHub Secrets の設定
+### 2. GitHub Secrets の設定（詳細手順）
 
 GitHubリポジトリの設定画面で、環境変数（Secrets）を登録します。
+**これらの値は暗号化されて保存され、ログにも表示されないため安全です。**
 
-1. GitHubのリポジトリページを開く
-2. **Settings** タブをクリック
-3. 左メニューから **Secrets and variables** > **Actions** を選択
-4. **New repository secret** をクリック
-5. 以下の環境変数を1つずつ追加:
+#### 手順
 
-| Name | Value |
-|------|-------|
-| `SUPABASE_URL` | `https://your-project.supabase.co` |
-| `SUPABASE_KEY` | `eyJhbGciOiJIUzI1NiIsInR5c...` |
-| `TWILIO_ACCOUNT_SID` | `ACxxxxxxxxxxxxxxxxxxxxxxxx` |
-| `TWILIO_AUTH_TOKEN` | `your-auth-token` |
-| `TWILIO_PHONE_NUMBER` | `+81xxxxxxxxxx` |
-| `TWILIO_TWIML_BIN_URL` | `https://handler.twilio.com/twiml/EHxxxx...` |
-| `DRY_RUN` | `False` （本番運用時）または `True` （テスト時） |
+1. **GitHubのリポジトリページを開く**
+   - ブラウザで `https://github.com/Newrona-pi/6-oshi-call` を開きます
+
+2. **Settings タブをクリック**
+   - ページ上部のタブメニューから **Settings** をクリック
+   - （※ Settingsが表示されない場合は、リポジトリの管理者権限がない可能性があります）
+
+3. **Secrets and variables を開く**
+   - 左側のサイドバーを下にスクロール
+   - **Security** セクションの中にある **Secrets and variables** をクリック
+   - さらに **Actions** をクリック
+
+4. **New repository secret をクリック**
+   - 右上にある緑色の **New repository secret** ボタンをクリック
+
+5. **1つ目のSecretを追加: SUPABASE_URL**
+   - **Name** 欄に: `SUPABASE_URL` と入力（大文字小文字を正確に）
+   - **Secret** 欄に: Supabaseのプロジェクト URL を貼り付け
+     - 例: `https://dluoikwksuixzavqltar.supabase.co`
+     - （Supabase管理画面の Settings → API → Project URL からコピー）
+   - **Add secret** ボタンをクリック
+
+6. **2つ目のSecretを追加: SUPABASE_KEY**
+   - 再度 **New repository secret** をクリック
+   - **Name**: `SUPABASE_KEY`
+   - **Secret**: Supabaseの anon/public key を貼り付け
+     - 例: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`（とても長い文字列）
+     - （Supabase管理画面の Settings → API → Project API keys → anon public からコピー）
+   - **Add secret** をクリック
+
+7. **3つ目のSecretを追加: TWILIO_ACCOUNT_SID**
+   - **Name**: `TWILIO_ACCOUNT_SID`
+   - **Secret**: Twilioの Account SID を貼り付け
+     - 例: `ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`
+     - （Twilio Console のダッシュボード右上に表示されています）
+   - **Add secret** をクリック
+
+8. **4つ目のSecretを追加: TWILIO_AUTH_TOKEN**
+   - **Name**: `TWILIO_AUTH_TOKEN`
+   - **Secret**: Twilioの Auth Token を貼り付け
+     - （Twilio Console のダッシュボードで「Show」をクリックして表示）
+   - **Add secret** をクリック
+
+9. **5つ目のSecretを追加: TWILIO_PHONE_NUMBER**
+   - **Name**: `TWILIO_PHONE_NUMBER`
+   - **Secret**: Twilioで購入した電話番号（発信元番号）
+     - 例: `+81xxxxxxxxxx`
+     - （必ず `+81` から始まるE.164形式で入力）
+   - **Add secret** をクリック
+
+10. **6つ目のSecretを追加: TWILIO_TWIML_BIN_URL**
+    - **Name**: `TWILIO_TWIML_BIN_URL`
+    - **Secret**: TwiML BinのURL
+      - 例: `https://handler.twilio.com/twiml/EHxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`
+      - （Twilio Console → TwiML Bins で作成したURLをコピー）
+    - **Add secret** をクリック
+
+11. **7つ目のSecretを追加: DRY_RUN**
+    - **Name**: `DRY_RUN`
+    - **Secret**: `False` （本番運用時）または `True` （テスト時）
+      - **重要**: 最初は `True` にしてテストすることを推奨
+    - **Add secret** をクリック
+
+#### 確認
+
+すべて追加すると、以下の7つのSecretsが表示されているはずです：
+
+- ✅ SUPABASE_URL
+- ✅ SUPABASE_KEY
+- ✅ TWILIO_ACCOUNT_SID
+- ✅ TWILIO_AUTH_TOKEN
+- ✅ TWILIO_PHONE_NUMBER
+- ✅ TWILIO_TWIML_BIN_URL
+- ✅ DRY_RUN
+
+**注意**: 一度登録したSecretの値は、セキュリティ上の理由で再表示できません。
+間違えた場合は、同じ名前で再度登録すれば上書きされます。
+
+#### 各値の取得場所まとめ
+
+| Secret名 | 取得場所 |
+|---------|---------|
+| `SUPABASE_URL` | Supabase → Settings → API → Project URL |
+| `SUPABASE_KEY` | Supabase → Settings → API → Project API keys → anon public |
+| `TWILIO_ACCOUNT_SID` | Twilio Console → ダッシュボード右上 |
+| `TWILIO_AUTH_TOKEN` | Twilio Console → ダッシュボード右上（Showをクリック） |
+| `TWILIO_PHONE_NUMBER` | Twilio Console → Phone Numbers → Active numbers |
+| `TWILIO_TWIML_BIN_URL` | Twilio Console → TwiML Bins → 作成したBinのURL |
+| `DRY_RUN` | 手動で設定（`True` または `False`） |
 
 ### 3. ワークフローの有効化
 
