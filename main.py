@@ -49,11 +49,16 @@ TIME_SLOTS = {
     "晩": (time(18, 0), time(20, 59)),   # 18:00 - 20:59
 }
 
-# 推しライバーごとの音声URL（★ここに音声ファイルのURLを設定してください）
+# 推しライバーごとの音声URL（★ここにSupabase Storage等のURLを設定してください）
+# Twilioがアクセスできるよう、公開URLである必要があります。
 OSHI_AUDIO_MAPPING = {
-    "Aちゃん": "https://example.com/audio/a-chan.mp3",
-    "Bくん": "https://example.com/audio/b-kun.mp3",
-    # 必要に応じてここに追加
+    # CSVの 'oshi_name' : '音声ファイルのURL'
+    "早瀬弥生": "https://dluoikwksuixzavqltar.supabase.co/storage/v1/object/public/audio/hayaseyayoi.wav",
+    "ちろる": "https://dluoikwksuixzavqltar.supabase.co/storage/v1/object/public/audio/chirorunia.wav",
+    
+    # 互換性のため旧名も残しておきます（必要なければ削除可）
+    "Aちゃん": "https://dluoikwksuixzavqltar.supabase.co/storage/v1/object/public/audio/hayaseyayoi.wav",
+    "Bくん": "https://dluoikwksuixzavqltar.supabase.co/storage/v1/object/public/audio/chirorunia.wav",
 }
 
 # タイムゾーン設定
@@ -109,9 +114,21 @@ def generate_random_datetime(preferred_date: str, time_slot: str) -> datetime:
     # 希望日をdatetimeに変換
     date_obj = parser.parse(preferred_date).date()
     
+    # 具体的な時刻指定（HH:MM）の場合
+    if ":" in time_slot:
+        try:
+            hour, minute = map(int, time_slot.split(":"))
+            return datetime.combine(
+                date_obj,
+                time(hour, minute, 0),
+                tzinfo=JST
+            )
+        except ValueError:
+            print(f"⚠️ 時刻フォーマット不正: {time_slot}。処理を続行しますがエラーになる可能性があります。")
+    
     # 時間帯の範囲を取得
     if time_slot not in TIME_SLOTS:
-        raise ValueError(f"不正な時間帯: {time_slot}。'朝', '昼', '晩' のいずれかを指定してください。")
+        raise ValueError(f"不正な時間帯: {time_slot}。'朝', '昼', '晩' または 'HH:MM' を指定してください。")
     
     start_time, end_time = TIME_SLOTS[time_slot]
     
@@ -270,8 +287,16 @@ def execute_calls():
                 print(f"  🧪 [DRY RUN] 電話をかける処理をスキップしました")
                 print(f"  音声URL: {audio_url}")
             else:
-                # TwiMLを生成
-                twiml_url = f"{SUPABASE_URL}/functions/v1/twiml?audio_url={audio_url}"
+                # TwiML BinのURLを使用
+                # 環境変数から取得するか、直接書き換えてください
+                # 例: https://handler.twilio.com/twiml/EHxxxxxxxxxxxxxxxxxxxxxx
+                base_twiml_url = os.getenv("TWILIO_TWIML_BIN_URL", "")
+                
+                if not base_twiml_url:
+                    raise ValueError("TWILIO_TWIML_BIN_URL が設定されていません。.envを確認してください")
+                
+                # パラメータとして音声URLを渡す (CamelCaseのパラメータ名はTwiML Bin側で {{AudioUrl}} として受け取れる)
+                twiml_url = f"{base_twiml_url}?AudioUrl={audio_url}"
                 
                 # Twilioで発信
                 call = twilio_client.calls.create(

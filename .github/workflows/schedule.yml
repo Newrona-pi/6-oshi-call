@@ -1,0 +1,41 @@
+name: Scheduled Call Execution
+
+# 定期実行スケジュール（10分ごと）
+on:
+  schedule:
+    # UTCで指定（日本時間 - 9時間）
+    # 例: */10 * * * * = 10分ごと
+    - cron: '*/10 * * * *'
+  
+  # 手動実行も可能にする
+  workflow_dispatch:
+
+jobs:
+  execute-calls:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Execute scheduled calls
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL || '' }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY || '' }}
+          TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID || '' }}
+          TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN || '' }}
+          TWILIO_PHONE_NUMBER: ${{ secrets.TWILIO_PHONE_NUMBER || '' }}
+          TWILIO_TWIML_BIN_URL: ${{ secrets.TWILIO_TWIML_BIN_URL || '' }}
+          DRY_RUN: ${{ secrets.DRY_RUN || 'True' }}
+        run: |
+          python main.py execute
