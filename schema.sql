@@ -13,6 +13,8 @@ CREATE TABLE IF NOT EXISTS call_reservations (
     scheduled_at TIMESTAMP WITH TIME ZONE NOT NULL,  -- ランダム生成された発信予定時刻
     status TEXT NOT NULL DEFAULT 'waiting', -- ステータス: waiting, called, error
     error_message TEXT,                     -- エラー時のメッセージ
+    retry_count INTEGER NOT NULL DEFAULT 0, -- リトライ回数
+    last_call_status TEXT,                  -- 最後の発信ステータス (completed, busy, no-answer, failed等)
     called_at TIMESTAMP WITH TIME ZONE,     -- 実際に発信した時刻
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()

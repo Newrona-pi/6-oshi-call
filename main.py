@@ -49,6 +49,10 @@ TIME_SLOTS = {
     "晩": (time(18, 0), time(20, 59)),   # 18:00 - 20:59
 }
 
+# リトライ設定
+MAX_RETRY_COUNT = 3  # 最大リトライ回数
+RETRY_INTERVAL_MINUTES = 5  # リトライ間隔（分）
+
 # 推しライバーごとの音声URL（★ここにSupabase Storage等のURLを設定してください）
 # Twilioがアクセスできるよう、公開URLである必要があります。
 OSHI_AUDIO_MAPPING = {
@@ -286,16 +290,22 @@ def execute_calls():
             if DRY_RUN:
                 print(f"  🧪 [DRY RUN] 電話をかける処理をスキップしました")
                 print(f"  音声URL: {audio_url}")
+                
+                # DRY RUNでも成功扱いにする
+                supabase.table("call_reservations").update({
+                    "status": "called",
+                    "called_at": now.isoformat(),
+                    "last_call_status": "dry-run"
+                }).eq("id", order_id).execute()
+                
             else:
                 # TwiML BinのURLを使用
-                # 環境変数から取得するか、直接書き換えてください
-                # 例: https://handler.twilio.com/twiml/EHxxxxxxxxxxxxxxxxxxxxxx
                 base_twiml_url = os.getenv("TWILIO_TWIML_BIN_URL", "")
                 
                 if not base_twiml_url:
                     raise ValueError("TWILIO_TWIML_BIN_URL が設定されていません。.envを確認してください")
                 
-                # パラメータとして音声URLを渡す (CamelCaseのパラメータ名はTwiML Bin側で {{AudioUrl}} として受け取れる)
+                # パラメータとして音声URLを渡す
                 twiml_url = f"{base_twiml_url}?AudioUrl={audio_url}"
                 
                 # Twilioで発信
@@ -306,12 +316,45 @@ def execute_calls():
                 )
                 
                 print(f"  ✅ 発信成功: Call SID={call.sid}")
-            
-            # ステータスを更新
-            supabase.table("call_reservations").update({
-                "status": "called",
-                "called_at": now.isoformat()
-            }).eq("id", order_id).execute()
+                
+                # 少し待ってから通話ステータスを取得
+                import time
+                time.sleep(3)  # 3秒待機
+                
+                # 通話ステータスを取得
+                call_status = twilio_client.calls(call.sid).fetch().status
+                print(f"  📊 通話ステータス: {call_status}")
+                
+                # リトライが必要かどうか判定
+                retry_needed = call_status in ['busy', 'no-answer', 'failed']
+                current_retry_count = target.get('retry_count', 0)
+                
+                if retry_needed and current_retry_count < MAX_RETRY_COUNT:
+                    # リトライ対象: scheduled_at を未来に設定して waiting に戻す
+                    next_retry_time = now + timedelta(minutes=RETRY_INTERVAL_MINUTES)
+                    
+                    supabase.table("call_reservations").update({
+                        "status": "waiting",
+                        "retry_count": current_retry_count + 1,
+                        "last_call_status": call_status,
+                        "scheduled_at": next_retry_time.isoformat()
+                    }).eq("id", order_id).execute()
+                    
+                    print(f"  🔄 リトライ予約: {RETRY_INTERVAL_MINUTES}分後に再発信します（{current_retry_count + 1}/{MAX_RETRY_COUNT}回目）")
+                    
+                else:
+                    # 成功 or リトライ上限到達
+                    final_status = "called" if call_status == "completed" else "error"
+                    
+                    supabase.table("call_reservations").update({
+                        "status": final_status,
+                        "called_at": now.isoformat(),
+                        "last_call_status": call_status,
+                        "retry_count": current_retry_count
+                    }).eq("id", order_id).execute()
+                    
+                    if final_status == "error":
+                        print(f"  ❌ 最終失敗: ステータス={call_status}（リトライ上限到達）")
             
         except Exception as e:
             print(f"  ❌ 発信失敗: {e}")
