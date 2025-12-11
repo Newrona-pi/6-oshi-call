@@ -5,7 +5,7 @@ on:
   schedule:
     # UTCで指定（日本時間 - 9時間）
     # 例: */10 * * * * = 10分ごと
-    - cron: '*/1 * * * *'
+    - cron: '*/5 * * * *'
   
   # 手動実行も可能にする
   workflow_dispatch:
