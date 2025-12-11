@@ -32,4 +32,4 @@ Thumbs.db
 
 # CSV (except sample)
 *.csv
-!sample.csv
+!sample.csv.template
