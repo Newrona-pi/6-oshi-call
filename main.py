@@ -308,53 +308,71 @@ def execute_calls():
                 # パラメータとして音声URLを渡す
                 twiml_url = f"{base_twiml_url}?AudioUrl={audio_url}"
                 
-                # Twilioで発信
+                # Twilioで発信（AMD有効化）
                 call = twilio_client.calls.create(
                     to=phone_number,
                     from_=TWILIO_PHONE_NUMBER,
-                    url=twiml_url
+                    url=twiml_url,
+                    machine_detection='DetectMessageEnd',  # 留守電検出を有効化
+                    machine_detection_timeout=30,  # 検出タイムアウト（秒）
+                    machine_detection_speech_threshold=2400,  # 音声検出の閾値（ミリ秒）
+                    machine_detection_speech_end_threshold=1200,  # 音声終了の閾値（ミリ秒）
+                    machine_detection_silence_timeout=5000  # 無音タイムアウト（ミリ秒）
                 )
                 
                 print(f"  ✅ 発信成功: Call SID={call.sid}")
                 
-                # 少し待ってから通話ステータスを取得
+                # 少し待ってから通話ステータスとAMD結果を取得
                 import time
-                time.sleep(3)  # 3秒待機
+                time.sleep(5)  # 5秒待機（AMD検出に時間がかかるため）
                 
-                # 通話ステータスを取得
-                call_status = twilio_client.calls(call.sid).fetch().status
+                # 通話情報を再取得
+                call_info = twilio_client.calls(call.sid).fetch()
+                call_status = call_info.status
+                answered_by = call_info.answered_by  # AMD結果: human, machine, fax, unknown
+                
                 print(f"  📊 通話ステータス: {call_status}")
+                print(f"  🤖 応答者: {answered_by}")
                 
                 # リトライが必要かどうか判定
-                retry_needed = call_status in ['busy', 'no-answer', 'failed']
+                # 1. 通話失敗系（busy, no-answer, failed）
+                # 2. 留守電が応答した場合（answered_by == 'machine'）
+                retry_needed = (
+                    call_status in ['busy', 'no-answer', 'failed'] or
+                    answered_by == 'machine'
+                )
                 current_retry_count = target.get('retry_count', 0)
                 
                 if retry_needed and current_retry_count < MAX_RETRY_COUNT:
                     # リトライ対象: scheduled_at を未来に設定して waiting に戻す
                     next_retry_time = now + timedelta(minutes=RETRY_INTERVAL_MINUTES)
                     
+                    retry_reason = "留守電検出" if answered_by == 'machine' else f"ステータス: {call_status}"
+                    
                     supabase.table("call_reservations").update({
                         "status": "waiting",
                         "retry_count": current_retry_count + 1,
-                        "last_call_status": call_status,
+                        "last_call_status": f"{call_status} / {answered_by}",
                         "scheduled_at": next_retry_time.isoformat()
                     }).eq("id", order_id).execute()
                     
-                    print(f"  🔄 リトライ予約: {RETRY_INTERVAL_MINUTES}分後に再発信します（{current_retry_count + 1}/{MAX_RETRY_COUNT}回目）")
+                    print(f"  🔄 リトライ予約: {RETRY_INTERVAL_MINUTES}分後に再発信します（{retry_reason}、{current_retry_count + 1}/{MAX_RETRY_COUNT}回目）")
                     
                 else:
-                    # 成功 or リトライ上限到達
-                    final_status = "called" if call_status == "completed" else "error"
+                    # 成功（本人が応答） or リトライ上限到達
+                    final_status = "called" if (call_status == "completed" and answered_by == "human") else "error"
                     
                     supabase.table("call_reservations").update({
                         "status": final_status,
                         "called_at": now.isoformat(),
-                        "last_call_status": call_status,
+                        "last_call_status": f"{call_status} / {answered_by}",
                         "retry_count": current_retry_count
                     }).eq("id", order_id).execute()
                     
                     if final_status == "error":
-                        print(f"  ❌ 最終失敗: ステータス={call_status}（リトライ上限到達）")
+                        print(f"  ❌ 最終失敗: ステータス={call_status}, 応答者={answered_by}（リトライ上限到達）")
+                    else:
+                        print(f"  ✨ 成功: 本人が応答しました")
             
         except Exception as e:
             print(f"  ❌ 発信失敗: {e}")
