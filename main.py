@@ -372,8 +372,13 @@ def execute_calls():
                     print(f"  🔄 リトライ予約: {RETRY_INTERVAL_MINUTES}分後に再発信します（{retry_reason}、{current_retry_count + 1}/{MAX_RETRY_COUNT}回目）")
                     
                 else:
-                    # 成功（本人が応答） or リトライ上限到達
-                    final_status = "called" if (call_status == "completed" and answered_by == "human") else "error"
+                    # 成功判定: 通話が完了していて、留守電でなければ成功
+                    # answered_by が "unknown" の場合（無言など）も成功扱い
+                    is_success = (
+                        call_status == "completed" and 
+                        answered_by in ["human", "unknown"]
+                    )
+                    final_status = "called" if is_success else "error"
                     
                     supabase.table("call_reservations").update({
                         "status": final_status,
@@ -385,7 +390,8 @@ def execute_calls():
                     if final_status == "error":
                         print(f"  ❌ 最終失敗: ステータス={call_status}, 応答者={answered_by}（リトライ上限到達）")
                     else:
-                        print(f"  ✨ 成功: 本人が応答しました")
+                        success_msg = "本人が応答しました" if answered_by == "human" else f"通話完了（応答者: {answered_by}）"
+                        print(f"  ✨ 成功: {success_msg}")
             
         except Exception as e:
             print(f"  ❌ 発信失敗: {e}")
