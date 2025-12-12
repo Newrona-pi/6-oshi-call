@@ -320,16 +320,31 @@ def execute_calls():
                 
                 print(f"  ✅ 発信成功: Call SID={call.sid}")
                 
-                # 少し待ってから通話ステータスとAMD結果を取得
+                # 通話終了まで待機（ポーリング）
                 import time
-                time.sleep(5)  # 5秒待機（AMD検出に時間がかかるため）
+                max_wait_seconds = 180  # 最大3分待機
+                poll_interval = 3  # 3秒ごとに確認
+                elapsed = 0
                 
-                # 通話情報を再取得
+                print(f"  ⏳ 通話終了を待機中...")
+                
+                while elapsed < max_wait_seconds:
+                    call_info = twilio_client.calls(call.sid).fetch()
+                    call_status = call_info.status
+                    
+                    # 通話が終了状態になったら抜ける
+                    if call_status in ['completed', 'busy', 'no-answer', 'failed', 'canceled']:
+                        break
+                    
+                    time.sleep(poll_interval)
+                    elapsed += poll_interval
+                
+                # 最終的な通話情報を取得
                 call_info = twilio_client.calls(call.sid).fetch()
                 call_status = call_info.status
                 answered_by = call_info.answered_by  # AMD結果: human, machine, fax, unknown
                 
-                print(f"  📊 通話ステータス: {call_status}")
+                print(f"  📊 通話ステータス: {call_status} (待機時間: {elapsed}秒)")
                 print(f"  🤖 応答者: {answered_by}")
                 
                 # リトライが必要かどうか判定
