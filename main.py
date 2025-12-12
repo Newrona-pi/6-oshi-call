@@ -314,7 +314,7 @@ def execute_calls():
                     from_=TWILIO_PHONE_NUMBER,
                     url=twiml_url,
                     machine_detection='Premium',  # Premium AMD（より高精度な留守電検出）
-                    async_amd='true',  # 非同期AMD（音声再生を遅延させる）
+                    async_amd='false',  # 同期AMD（留守電判定後は音声を流さない）
                     async_amd_status_callback=None  # コールバックなし（シンプル実装）
                 )
                 
