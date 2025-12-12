@@ -313,11 +313,9 @@ def execute_calls():
                     to=phone_number,
                     from_=TWILIO_PHONE_NUMBER,
                     url=twiml_url,
-                    machine_detection='DetectMessageEnd',  # 留守電検出を有効化
-                    machine_detection_timeout=30,  # 検出タイムアウト（秒）
-                    machine_detection_speech_threshold=2400,  # 音声検出の閾値（ミリ秒）
-                    machine_detection_speech_end_threshold=1200,  # 音声終了の閾値（ミリ秒）
-                    machine_detection_silence_timeout=5000  # 無音タイムアウト（ミリ秒）
+                    machine_detection='Enable',  # 留守電検出を有効化（より早く検出）
+                    async_amd='true',  # 非同期AMD（音声再生を遅延させる）
+                    async_amd_status_callback=None  # コールバックなし（シンプル実装）
                 )
                 
                 print(f"  ✅ 発信成功: Call SID={call.sid}")
