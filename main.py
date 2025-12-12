@@ -308,12 +308,12 @@ def execute_calls():
                 # パラメータとして音声URLを渡す
                 twiml_url = f"{base_twiml_url}?AudioUrl={audio_url}"
                 
-                # Twilioで発信（AMD有効化）
+                # Twilioで発信（AMD Premium有効化）
                 call = twilio_client.calls.create(
                     to=phone_number,
                     from_=TWILIO_PHONE_NUMBER,
                     url=twiml_url,
-                    machine_detection='Enable',  # 留守電検出を有効化（より早く検出）
+                    machine_detection='Premium',  # Premium AMD（より高精度な留守電検出）
                     async_amd='true',  # 非同期AMD（音声再生を遅延させる）
                     async_amd_status_callback=None  # コールバックなし（シンプル実装）
                 )
